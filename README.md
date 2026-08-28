@@ -1,4 +1,4 @@
-# Awesome Knowledge Cutoff Effects on LLM-Generated Literature Reviews
+# Knowledge Cutoff Effects on LLM-Generated Literature Reviews
 
 A curated collection of research papers, datasets, tools, implementations, and learning resources on how LLM knowledge cutoffs distort literature review generation in rapidly evolving fields, and on the strategies used to mitigate this.
 
