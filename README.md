@@ -24,7 +24,7 @@ Every large language model carries a fixed knowledge cutoff, beyond which it has
 
 **Knowledge Cutoff Effects on LLM-Generated Literature Reviews in Rapidly Evolving Fields: A Review of Mechanisms, Current Mitigations, and Open Research Problems**
 
-[View Paper](paper/Knowledge_Cutoff_Effects_on_LLM_Literature_Reviews.pdf)
+[View Paper](paper/Knowledge_Cutoff_Effects_on_LLM_Literature_Reviews.docx.pdf)
 
 ## Survey Papers
 
