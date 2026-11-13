@@ -1,0 +1,13 @@
+# One-Page Research Brief
+
+| Field | Project Information |
+| :--- | :--- |
+| **Review topic and key papers** | **Topic:** Temporal Friction in Retrieval-Augmented Generation (RAG).<br>**Key Papers:** Lewis et al. 2020 (RAG foundation); Lazaridou et al. 2021 (Temporal Generalization); Kasai et al. 2024 (RealTime QA); Wang et al. 2023 (Knowledge Conflicts). |
+| **Research gap** | Existing RAG evaluations fail to isolate the LLM's parametric knowledge cutoff as an independent variable, leaving the conflict between outdated internal memory and new post-cutoff evidence ("temporal friction") unexplored (Gao et al., 2023). |
+| **Research question** | **Primary:** How does an LLM's synthesis quality decay when forced to integrate retrieved scientific evidence published strictly after its training boundary?<br>**Sub-Qs:** (1) Does evidence omission increase? (2) Does stale open-problem framing increase? |
+| **Study pathway** | **Comparative & Modification:** Comparing a Naive RAG baseline against a Legacy Control, and introducing a Targeted Modification (Parametric Priming/Temporal Forcing) to actively induce memory friction. |
+| **Dataset or measurement setup** | **Source:** 300 real abstracts from arXiv API (Query: "large language models OR retrieval").<br>**License:** arXiv non-exclusive distribution.<br>**Partitions:** Pre-Cutoff (< July 2023), Near-Cutoff (July 2023–Jan 2024), Post-Cutoff (> Jan 2024). |
+| **Baseline/comparators** | **Baseline 1 (Naive):** `gemini-3.5-flash-lite`.<br>**Baseline 2 (Legacy Control):** `gemini-1.0-pro`.<br>**Baseline 3 (Primed RAG):** Modified adversarial prompt.<br>**Availability:** Accessed via Google Generative Language REST API. |
+| **Primary metric and control** | **Metrics:** Omission Score (Continuous 0.0–1.0) and Stale Framing Rate (Binary 0/1) assessed via LLM-as-a-judge (`gemini-1.5-pro`).<br>**Controls:** Fixed batch size (10), static grading rubric JSON schema, deterministic shuffling (`random_state=42`). |
+| **Computing and risks** | **Compute:** Standard CPU + ~900 API calls.<br>**Risks & Bottlenecks:** API rate limits (HTTP 429), gRPC transport hangs, JSON parsing failures.<br>**Fallback:** Switched to raw `urllib` REST calls, implemented exponential backoff (10s–30s), used regex for JSON extraction. |
+| **First executable milestone** | **Completed:** Bypassed Python SDK with direct `urllib` calls and successfully processed a 2-paper test batch to validate the regex-based LLM-as-a-judge JSON extraction pipeline. |

@@ -1,0 +1,7 @@
+# Config for Baseline 3 (Parametric Priming)
+include: "base_config.yaml"
+
+intervention:
+  type: "parametric_priming"
+  prompt_prefix: "Before reading the following abstracts, state the historical consensus and open problems regarding this topic based on your prior knowledge. Then, read the abstracts and provide a synthesized review."
+  enforce_strict_order: true

@@ -1,0 +1,19 @@
+# Config for Baseline 1 (Naive RAG) & Baseline 2 (Legacy Control)
+model:
+  modern: "gemini-3.5-flash-lite"
+  legacy: "gemini-1.0-pro"
+
+dataset:
+  path: "../data/stratified_arxiv_dataset_4.csv"
+  random_state: 42
+  batch_size: 10
+  target_total: 300
+  windows:
+    - "Pre-Cutoff"
+    - "Near-Cutoff"
+    - "Post-Cutoff"
+
+execution:
+  max_retries: 3
+  backoff_factor: 2
+  initial_delay: 10

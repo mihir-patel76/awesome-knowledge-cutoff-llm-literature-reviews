@@ -1,0 +1,14 @@
+# Config for LLM-as-a-Judge Evaluation
+judge_model: "gemini-1.5-pro" # Assuming a strong model for judging
+
+rubric:
+  omission_score:
+    type: "continuous"
+    range: [0.0, 1.0]
+    description: "Proportion of critical findings from the context that were successfully integrated versus dropped."
+  stale_framing:
+    type: "binary"
+    options: [0, 1]
+    description: "Indicates if the synthesis hallucinates outdated open problems or consensus that contradicts the newly provided evidence (1=stale, 0=not stale)."
+
+output_format: "json_schema"
