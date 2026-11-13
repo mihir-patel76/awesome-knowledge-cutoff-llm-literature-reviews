@@ -17,33 +17,32 @@
 
 \begin{document}
 
-\title{Absolute Parametric Override: A Comprehensive Review and Empirical Study of Temporal Friction in RAG}
+\title{Absolute Parametric Override: An Empirical Study and Review of Temporal Friction in RAG}
 
 \author{Mihir Rajeshkumar Patel}
 \affiliation{%
-  \institution{Indian Institute of Information Technology (IIIT)}
-  \city{Prayagraj}
-  \country{India}
+\institution{Indian Institute of Information Technology Allahabad}
+\city{Prayagraj}
+\country{India}
 }
-\email{mihir@iiita.ac.in}
+\email{mai2026003@iiita.ac.in}
 
 \begin{abstract}
-Retrieval-Augmented Generation (RAG) is the industry standard for mitigating Large Language Model (LLM) knowledge staleness. However, existing reviews and evaluations fail to isolate the model's parametric knowledge cutoff as an independent variable. Consequently, it remains largely unknown how an LLM's synthesis quality decays when forced to integrate retrieved scientific evidence published strictly after its training boundary. This paper presents a comprehensive literature synthesis of temporal generalization in LLMs, alongside a controlled empirical study measuring ``temporal friction''---the conflict between outdated internal parametric memory and newly retrieved post-cutoff evidence. Using a temporally stratified dataset of 300 arXiv abstracts, we employ an LLM-as-a-judge to evaluate evidence omission and stale problem framing. We benchmark Gemini 1.0 (Legacy Control), Gemini 3.5 Flash (Naive RAG), and a novel Baseline 3 intervention (Primed RAG). Our statistical analysis reveals a robust double-null result: Naive RAG exhibits no significant temporal decay, and aggressive Parametric Priming fails to induce significant stale framing. We introduce the concept of ``Absolute Parametric Override,'' concluding that modern attention mechanisms reliably prioritize in-context working memory over long-term parametric memory, ensuring high-fidelity synthesis for developers building dynamic QA pipelines.
+Retrieval-Augmented Generation (RAG) is widely adopted to address the knowledge limitations of large language models (LLMs). However, existing evaluations often overlook a crucial factor: the LLM's actual training cutoff date. This oversight leaves us uncertain about how LLMs perform when presented with current scientific information published after their training period. This paper delves into the existing research on LLMs' ability to generalize across time and presents an empirical investigation into what we term "temporal friction"—the discordance that arises when a model's ingrained, outdated knowledge clashes with new evidence acquired post-training.
+
+Utilizing a meticulously curated dataset of 300 arXiv abstracts, we employed an LLM-as-a-judge methodology to evaluate the frequency of evidence omission and the model's tendency to rely on outdated problem frameworks. Our experiments involved Gemini 1.0 (serving as a baseline), Gemini 3.5 Flash, and a modified approach where the model was specifically instructed to access its historical understanding before processing the new abstracts.
+
+The findings were unexpected. In standard configurations, we observed no statistically significant degradation in performance over time. Furthermore, even when deliberately prompted to recall its prior knowledge, the model did not revert to obsolete framing. We characterize this observation as an "absolute parametric override," indicating that contemporary attention mechanisms are highly adept at prioritizing information from the current context (working memory) over their permanently stored knowledge (parametric weights). This is a positive development for those developing dynamic question-answering systems.
 \end{abstract}
 
+
 \begin{CCSXML}
-<ccs2012>
-   <concept>
-       <concept_id>10010147.10010178.10010179.10010182</concept_id>
-       <concept_desc>Computing methodologies~Natural language generation</concept_desc>
-       <concept_significance>500</concept_significance>
-       </concept>
-   <concept>
-       <concept_id>10002951.10003317.10003347.10003348</concept_id>
-       <concept_desc>Information systems~Question answering</concept_desc>
-       <concept_significance>500</concept_significance>
-       </concept>
- </ccs2012>
+10010147.10010178.10010179.10010182
+Computing methodologies~Natural language generation
+500
+10002951.10003317.10003347.10003348
+Information systems~Question answering
+500
 \end{CCSXML}
 
 \ccsdesc[500]{Computing methodologies~Natural language generation}
@@ -54,46 +53,49 @@ Retrieval-Augmented Generation (RAG) is the industry standard for mitigating Lar
 \maketitle
 
 \section{Introduction} \label{sec:intro}
-The rapid proliferation of scientific literature has made manual literature reviews increasingly intractable, driving the adoption of Large Language Models (LLMs) for automated academic synthesis. However, LLMs suffer from a fundamental constraint: their parametric knowledge is frozen at a specific cutoff date during training \cite{lazaridou2021mind}. This phenomenon frequently results in the ``Illusion of Knowledge Persistence,'' where models confidently generate hallucinations based on outdated historical paradigms. To address this, Retrieval-Augmented Generation (RAG) has emerged as the standard mitigation strategy \cite{lewis2020retrieval}, allowing models to dynamically ground their generations in externally retrieved documents.
 
-Despite the widespread adoption of RAG, current evaluation benchmarks predominantly focus on retrieval chunking accuracy or general reading comprehension. As highlighted in recent surveys \cite{gao2023retrieval}, existing literature systematically fails to isolate the model's parametric knowledge cutoff as an independent variable. This leaves a critical gap in our understanding: When an LLM is forced to integrate newly published scientific evidence that strictly contradicts its training boundary, how does its synthesis quality decay? 
+Keeping pace with the ever-increasing flood of new scientific publications is a Herculean task, making manual literature reviews virtually impossible. In response, researchers have increasingly relied on Large Language Models (LLMs) to automate the process of synthesizing this information. A significant limitation, however, is that LLMs' knowledge is static, fixed at the time of their last training \cite{lazaridou2021mind}. This temporal constraint can lead to models confidently asserting outdated scientific concepts as current fact. The prevailing solution to this problem has been Retrieval-Augmented Generation (RAG) \cite{lewis2020retrieval}, a technique that enables LLMs to access and process recent, relevant documents immediately before generating a response.
 
-\subsection{Research Questions and Scope} \label{subsec:research_questions}
-To systematically address this gap, we pose the following research questions:
+Despite RAG's widespread adoption, current evaluation methods tend to concentrate on the effectiveness of document retrieval and the LLM's reading comprehension skills. As noted in recent analyses \cite{gao2023retrieval}, these assessments frequently overlook the impact of the model's inherent knowledge cutoff date. This oversight represents a substantial gap in our understanding. For instance, consider the scenario where an LLM is presented with a new scientific paper that fundamentally challenges its pre-existing training data. How does the model handle this contradiction? Does its capacity to integrate and synthesize this new information falter?
+
+\subsection{Research Questions} \label{subsec:research_questions}
+We wanted to investigate the following:
 \begin{enumerate}
-    \item \textbf{Sub-Question 1 (Omission):} Does the rate of relevant evidence omission significantly increase when retrieved context consists of post-cutoff literature compared to pre-cutoff literature?
-    \item \textbf{Sub-Question 2 (Stale Framing):} How does temporal classification affect the probability of an LLM generating historically stale open-problem framing?
+\item \textbf{Omission:} Will the model begin to omit the new evidence more frequently if the retrieved context is from well after the cut off date?
+\item \textbf{Stale Framing:} We explore the extent to which the publication date of retrieved evidence influences a large language model's tendency to frame discussions about a subject in a historical context.
 \end{enumerate}
 
-\subsection{Contributions} \label{subsec:contributions}
-We hypothesize that modern LLMs struggle with temporal friction, particularly when forced to explicitly reconcile new evidence against historical consensus. Our contributions are threefold:
+\subsection{Our Contributions} \label{subsec:contributions}
+Our central hypothesis checks that contemporary large language models will encounter difficulties in managing temporal discrepancies, particularly when tasked with integrating novel information alongside their existing knowledge base. This study offers three principal contributions:
 \begin{itemize}
-    \item \textbf{Literature Synthesis \& Taxonomy:} We provide a comprehensive review and taxonomy of temporal generalization and knowledge conflict resolution in RAG systems (detailed in Section \ref{sec:lit_review}).
-    \item \textbf{Empirical Formulation:} We design a robust evaluation rubric and mathematical formalization for evidence omission and stale framing (outlined in Section \ref{sec:methodology}).
-    \item \textbf{Targeted Intervention:} We execute Parametric Priming (Baseline 3), an adversarial prompt design forcing the LLM to access its historical memory before synthesis, rigorously testing the absolute limits of RAG's overriding capabilities (analyzed in Section \ref{sec:results}).
+\item \textbf{Synthesising the Literature:} We offer a thorough examination of how current practices tackle issues of temporal generalization and knowledge conflict within the field (detailed in Section \ref{sec:lit_review}).
+\item \textbf{New Measurement Methodology:} This section outlines a comprehensive methodology, complete with mathematical underpinnings, for quantifying evidence omission and outdated framing (Section \ref{sec:methodology}).
+\item \textbf{Adversarial Experiment:} We devised an experimental setup (Baseline 3) designed to challenge the LLM's historical memory, pushing the boundaries of how the RAG override functions (discussed in Section \ref{sec:results}).
 \end{itemize}
 
-\section{Literature Review and Taxonomy} \label{sec:lit_review}
-The landscape of LLM knowledge augmentation can be broadly classified into three taxonomic pillars, illustrated visually in Figure \ref{fig:taxonomy}: Parametric Updating, Temporal RAG, and Knowledge Conflicts. 
+\section{Reviewing the Literature} \label{sec:lit_review}
+Currently, there are three primary strategies for enhancing the knowledge base of Large Language Models, as illustrated in Figure \ref{fig:taxonomy}:
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.8\columnwidth]{taxonomy_diagram.png}
-\caption{Taxonomy of LLM Knowledge Augmentation illustrating the three primary pillars addressed in current literature.}
+\caption{A visual breakdown of how current research tackles LLM knowledge augmentation.}
 \label{fig:taxonomy}
 \end{figure}
+\subsection{Addressing Model Staleness: Parameter Updates versus Temporal RAG} \label{subsec:parametric_updating}
 
-\subsection{Parametric Updating vs. Temporal RAG} \label{subsec:parametric_updating}
-The degradation of LLM performance over time, known as temporal decay, has been extensively documented by Lazaridou et al. \cite{lazaridou2021mind}. Traditional mitigation strategies involve continuous pre-training or model editing; however, these are computationally prohibitive. Conversely, Temporal RAG systems, such as RealTime QA \cite{kasai2024realtime}, augment generation by fetching the latest news or documents at inference time. While Ram et al. \cite{ram2023context} demonstrated the efficacy of in-context RAG for zero-shot generalization, these studies treat the LLM as a static reasoner, without probing how the temporal age of retrieved documents interacts with the internal parametric memory. Furthermore, recent surveys on temporal reasoning \cite{jin2024comprehensive} show that models still struggle with temporal logic, raising questions about their ability to synthesize longitudinally shifting scientific consensus.
+It's widely acknowledged that the capabilities of Large Language Models (LLMs) diminish over time, a phenomenon noted by Lazaridou et al. \cite{lazaridou2021mind}. A potential remedy is ongoing pre-training, but this approach is often prohibitively expensive for most research groups. Temporal Retrieval-Augmented Generation (RAG) systems, like RealTime QA \cite{kasai2024realtime}, offer an alternative by dynamically sourcing the most current articles. While this strategy proves effective for zero-shot tasks (Ram et al.) \cite{ram2023context}, the prevailing research paradigm often treats LLMs as pure reasoning engines, disregarding the impact of data age on their internal knowledge base. Extensive reviews of temporal reasoning in LLMs \cite{jin2024comprehensive} reveal persistent challenges in their ability to handle time-sensitive information, raising questions about their capacity to accurately reflect evolving scientific understanding.
 
-\subsection{Knowledge Conflicts} \label{subsec:knowledge_conflicts}
-When in-context information contradicts parametric memory, models face a \textit{knowledge conflict} \cite{wang2023knowledge}. Prior work has shown that models generally prefer in-context data, but can hallucinate if the context is highly counter-intuitive. Our work extends this by specifically testing \textit{temporal} conflicts in the domain of automated scientific literature reviews, where the "truth" naturally evolves and replaces previous paradigms.
+\subsection{Navigating Knowledge Discrepancies} \label{subsec:knowledge_conflicts}
 
-\subsection{Comparative Analysis of Existing Approaches} \label{subsec:comparative_analysis}
-Table \ref{tab:comparative} summarizes the key distinctions between prominent methodologies, recent surveys, and our proposed approach. As shown in the final row of Table \ref{tab:comparative}, existing empirical works primarily focus on factual QA rather than complex academic synthesis, leaving the mechanics of temporal friction largely unexplored.
+A situation where provided information contradicts a model's ingrained knowledge is termed a \textit{knowledge conflict} \cite{wang2023knowledge}. Research indicates that LLMs typically prioritize information presented within their immediate context, even when it clashes with their existing knowledge. However, if the incoming data appears highly improbable, models may resort to generating fabricated information, a phenomenon known as hallucination. Our focus was to specifically examine these \textit{temporal} conflicts within the realm of academic publications.
 
-\begin{table*}[t]
-\caption{Comparative Analysis of Existing Methodologies and Our Approach}
+\subsection{Our Approach in Context} \label{subsec:comparative_analysis}
+
+Table \ref{tab:comparative} illustrates how our methodologies diverge from those of prominent existing studies. The majority of empirical investigations concentrate on straightforward factual recall, leaving the intricate challenges of temporal dynamics within complex synthesis tasks largely unaddressed.
+
+\begin{table}[t]
+\caption{Looking at how our approach differs from existing research.}
 \label{tab:comparative}
 \centering
 \resizebox{\textwidth}{!}{
@@ -110,96 +112,104 @@ Gao et al. \cite{gao2023retrieval} & Survey of RAG Ecosystems & N/A & Retrieval 
 \bottomrule
 \end{tabular}
 }
-\end{table*}
+\end{table}
 
-\section{Extended Discussion on Temporal Generalization} \label{sec:extended_discussion}
-To fully contextualize the importance of our findings discussed later in Section \ref{sec:results}, we must explore the broader implications of temporal generalization in LLMs. The transition from static knowledge bases to dynamic, continuously updating RAG systems represents a paradigm shift in how we build AI-assisted research tools.
+\section{A Closer Look at Temporal Generalization}
 
-\subsection{Mechanisms of Temporal Conflict} \label{subsec:mechanisms}
-The core mechanism of temporal conflict arises when the attention layers of an LLM must weigh the salience of in-context tokens against the activated weights from its pre-training phase. In scenarios where new evidence directly contradicts the established prior, the model faces a decision boundary:
+To truly appreciate the significance of our findings (Section \ref{sec:results}), it's crucial to grasp the concept of temporal generalization. The shift from traditional, static datasets to Retrieval-Augmented Generation (RAG) models represents a substantial evolution in the development of AI research tools.
+
+\subsection{The Mechanics of Temporal Conflict}
+
+Temporal conflict arises when the Large Language Model's (LLM) attention mechanisms face a dilemma: they must weigh the significance of the current input tokens against the knowledge embedded in their pre-training weights. Consider a scenario where a newly published paper fundamentally challenges an established theory. In such cases, the LLM essentially has two pathways:
+
 \begin{itemize}
-    \item \textbf{Parametric Dominance:} The model ignores the retrieved context and hallucinates based on its training data.
-    \item \textbf{Contextual Override:} The model successfully suppresses its priors and synthesizes based solely on the new evidence.
+
+\item \textbf{Parametric Override:} The model disregards the incoming information and generates a response rooted in its existing, pre-trained knowledge, often leading to what's termed a hallucination.
+
+\item \textbf{Contextual Override:} Conversely, the model can set aside its prior knowledge and construct a novel understanding based solely on the presented new evidence, effectively creating a synthesis.
+
 \end{itemize}
 
-\section{Methodology} \label{sec:methodology}
-The complete experimental pipeline is illustrated in the Methodology Flowchart (Figure \ref{fig:methodology}).
+\section{Our Experimental Design}
+
+The framework for our experiments is visually detailed in Figure \ref{fig:methodology}.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=\textwidth]{methodology_flowchart.png}
-\caption{Methodology Flowchart outlining the end-to-end process from data collection to statistical evaluation.}
+\caption{A flowchart showing our process, from gathering the data to running the final statistics.}
 \label{fig:methodology}
 \end{figure}
 
-\subsection{Temporal Stratification Strategy} \label{subsec:stratification}
-We established October 2023 as the focal knowledge cutoff boundary. We constructed a dataset of 300 real scientific abstracts harvested from the arXiv API. The data was strictly binned into three temporal windows: \textit{Pre-Cutoff} (before July 2023), \textit{Near-Cutoff} (July 2023 - Jan 2024), and \textit{Post-Cutoff} (after Jan 2024).
 
-\subsection{Mathematical Formulation} \label{sec:math}
-Let $P_{param}(y | x)$ denote the probability of the model generating a synthesis $y$ given prompt $x$ based purely on parametric memory. In RAG, this becomes $P(y | x, z_{t})$, where $z_{t}$ represents retrieved evidence published at time $t$. Temporal friction occurs when $z_{t}$ contradicts the priors established in $P_{param}$.
+\subsection{Stratifying by Time} \label{subsec:stratification}
+To organize our study, we established October 2023 as a definitive cutoff point. We then gathered 300 actual scientific abstracts from the arXiv API. These abstracts were divided into three distinct categories based on their publication dates: "Pre-Cutoff" (published before July 2023), "Near-Cutoff" (published between July 2023 and January 2024), and "Post-Cutoff" (published after January 2024).
 
-To quantify this, we define the Omission Score mathematically in Equation \eqref{eq:omission}:
-\begin{equation} \label{eq:omission}
+\subsection{Calculating the Metrics} \label{sec:math}
+Our analysis involved assessing the model's ability to generate text. Initially, the model's own knowledge was used to determine the probability of producing a synthesis $y$ from a prompt $x$, denoted as $P_{param}(y | x)$. The introduction of Retrieval Augmented Generation (RAG) modifies this to $P(y | x, z_{t})$, where $z_{t}$ represents information retrieved at a specific time $t$. A discrepancy, or temporal conflict, arises when the retrieved information $z_{t}$ contradicts what the model would typically generate based on its own parameters.
+
+We measured the extent of missed information using the Omission Score, calculated as follows:
+
+\begin{equation}
 Score_{omission} = 1 - \frac{|E_{integrated} \cap E_{context}|}{|E_{context}|}
 \end{equation}
-where $E_{context}$ is the set of critical findings in the retrieved abstracts, and $E_{integrated}$ is the set of findings successfully synthesized by the LLM. As we will see in the results in Section \ref{sec:results}, maintaining a low score as defined by Equation \eqref{eq:omission} is critical for proving contextual override.
 
-\subsection{Experimental Baselines} \label{subsec:baselines}
-We evaluated three specific conditions:
+In this formula, $E_{context}$ signifies the crucial facts present in the abstracts, while $E_{integrated}$ denotes the information the model successfully incorporated. As detailed in Section \ref{sec:results}, our aim is to minimize this score, thereby demonstrating the model's capacity to be influenced by and adapt to external context.
+
+
+
+\subsection{The Three Baselines} \label{subsec:baselines}
+Three experiments were carried out:
 \begin{itemize}
-    \item \textbf{Baseline 1 (Naive RAG):} Standard zero-shot synthesis.
-    \item \textbf{Baseline 2 (Legacy Control):} Evaluated on a frozen older model snapshot.
-    \item \textbf{Baseline 3 (Primed RAG):} A targeted intervention where the prompt forces the model to state historical consensus \textit{before} reading post-cutoff abstracts.
+\item \textbf{Baseline 1 (Naive RAG):} A simple zero shot prompt asking for synthesis.
+\item \textbf{Baseline 2 (Legacy):} The same experiment but performed on a legacy version of the model.
+\item \textbf{Baseline 3 (Primed RAG):} The most challenging experiment. We forced the model to write about the historical consensus of the topic \textit{before} being given the newer post-cutoff abstracts.
 \end{itemize}
 
-\section{Experimental Setup} \label{sec:setup}
-For the Modern architecture, we utilized \texttt{gemini-3.5-flash-lite}. For the Legacy Control, we queried \texttt{gemini-1.0-pro}. Data within each temporal window was shuffled using a fixed seed (\texttt{random\_state=42}). An exponential backoff retry mechanism handled API rate limits.
+\section{Execution Details} \label{sec:setup}
+For our recent tests, we used the \texttt{gemini-3.5-flash-lite} model. For the older tests, we opted for \texttt{gemini-1.0-pro}. To make sure the sequence of our tests didn't skew the outcomes, we randomized the data within each time frame using a consistent seed (\texttt{random\_state=42}). We also incorporated a strategy of gradually increasing delays (exponential backoff) to prevent us from hitting the API's usage limits.
 
-\section{Results and Discussion} \label{sec:results}
+\section{What We Found} \label{sec:results}
+\subsection{The Numbers: A Double Null} \label{subsec:quantitative}
 
-\subsection{Quantitative Results: The Double Null} \label{subsec:quantitative}
-As detailed in Figure \ref{fig:comparison}, Naive RAG (Baseline 1) showed exceptional stability. The Kruskal-Wallis test across the temporal windows for Omission yielded $p=0.4057$, and the Chi-Square test for Stale Framing yielded $p=0.8285$. This indicates \textbf{no statistically significant temporal decay}.
+Looking at Figure \ref{fig:comparison}, you'll see that our basic approach, Naive RAG (Baseline 1), performed remarkably steadily. Statistical tests confirmed this: the Kruskal-Wallis test showed no significant difference in how often information was left out (p-value 0.4057), and the Chi-Square test indicated no significant difference in how outdated the information was presented (p-value 0.8285). In simpler terms, **there was no measurable degradation in performance over time.**
 
-We hypothesized that Parametric Priming (Baseline 3) would reintroduce temporal friction. However, as also visualized in Figure \ref{fig:comparison}, Baseline 3 demonstrated near-perfect resilience. 
+We had anticipated that Baseline 3, which prompted the model to consider past information, might introduce some issues due to the time element. However, as Figure \ref{fig:comparison} illustrates, this approach proved to be surprisingly robust.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=\columnwidth]{forcing_comparison_plot.png}
-\caption{Comparison of Omission Scores and Stale Framing across temporal windows. As seen, Baseline 3 strictly maintains low omission rates, confirming resilience.}
+\caption{Comparing how much evidence was omitted and how often stale framing occurred across the time windows.}
 \label{fig:comparison}
 \end{figure}
-
-\subsection{A/B Testing on Post-Cutoff Evidence} \label{subsec:ab_testing}
-To directly test the Parametric Priming intervention, we ran an A/B test exclusively on the Post-Cutoff window. As demonstrated visually in Figure \ref{fig:audit}, the difference was negligible.
+\subsection{Looking Just at the Post-Cutoff Data} \label{subsec:ab_testing}
+To ensure our adversarial prompt was effective we performed an A/B test for Post-Cutoff only. As seen in Figure \ref{fig:audit}, there was little difference between the two experiments.
 \begin{itemize}
-    \item \textbf{Omission Difference (Mann-Whitney U):} $p=0.0786$ (Not Significant).
-    \item \textbf{Stale Framing Difference (Chi-Square):} $p=1.0000$ (Not Significant).
+\item \textbf{Omission Difference (Mann-Whitney U):} p=0.0786 (Not Significant)
+\item \textbf{Stale Framing Difference (Chi-Square):} p=1.0000 (Not Significant)
 \end{itemize}
-
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.8\columnwidth]{publication_audit_figure.png}
-\caption{Post-Audit Omission Decay demonstrating the robust performance of both Naive and Primed RAG on post-cutoff data.}
+\caption{A closer look at how both Naive and Primed RAG handled the tricky post-cutoff data.}
 \label{fig:audit}
 \end{figure}
-
-\subsection{Discussion: Absolute Parametric Override} \label{subsec:discussion}
-These results are highly illuminating. In computer science, a robust "null result" often signifies a solved constraint. Our findings prove that explicitly activating outdated parametric memory does not degrade the synthesis of new evidence. When provided with in-context text, the model's attention heads forcefully prioritize "working memory" over "long-term memory". We term this phenomenon the \textbf{Absolute Parametric Override}.
-
-\section{Research Gaps and Future Directions} \label{sec:gaps}
-While our findings validate the robustness of modern RAG (Section \ref{subsec:quantitative}), several gaps remain for future exploration:
+\subsection{What This Means: Absolute Parametric Override} \label{subsec:discussion}
+Our findings offer some compelling observations. Within our research area, a robust "null result" actually signifies that a particular limitation has been successfully navigated. We've demonstrated that the model's capacity to synthesize novel evidence remains unimpaired, even when deliberately challenged with outdated information. It appears the attention mechanism heavily prioritizes its "working memory," a phenomenon we're labeling the \textbf{Absolute Parametric Override}.
+\section{Areas Requiring Further Investigation} \label{sec:gaps}
+Although our RAG models exhibited considerable robustness (as detailed in Section \ref{subsec:quantitative}), there are still avenues for continued exploration:
 \begin{enumerate}
-    \item \textbf{Cross-Domain Friction:} Our study focuses on computer science literature. Domains with rigid ontological structures (e.g., medical law) may exhibit distinct friction patterns when established facts are suddenly overturned.
-    \item \textbf{Extreme Context Stress:} Future work must assess if Absolute Parametric Override degrades under massive context loads (e.g., $>100,000$ tokens) where attention mechanisms inherently dilute, leading to the "Lost in the Middle" phenomenon.
-    \item \textbf{Architectural Dependencies:} This study utilized highly optimized transformer architectures. Future research should evaluate whether alternative architectures, such as State Space Models (Mamba) or Mixture of Experts (MoE), exhibit the same degree of absolute parametric override when processing post-cutoff evidence.
+\item \textbf{Varied Subject Areas:} Our evaluation was confined to computer science abstracts. In fields governed by stringent regulations, such as medical jurisprudence, we might encounter distinct forms of resistance.
+\item \textbf{Expansive Context Windows:} It remains to be seen whether this absolute override holds true when presented with extremely large inputs, such as 100,000 tokens. It's highly probable that the attention mechanism will lead to a dilution of information, triggering the widely recognized 
+\ref{subsec:quantitative}), there is still scope for further work:
+\item \textbf{Alternative Model Designs:} Our experiments focused solely on highly refined transformer architectures. It would be insightful to investigate whether other model types, including Mixture of Experts (MoE) or State Space Models like Mamba, exhibit comparable resilience.
 \end{enumerate}
 
+
 \section{Conclusion} \label{sec:conclusion}
-This study empirically isolates the effect of LLM parametric knowledge cutoffs on scientific literature synthesis. By structuring a comprehensive taxonomy (Section \ref{sec:lit_review}), defining metrics mathematically as in Equation \eqref{eq:omission}, and executing a rigorous evaluation pipeline (Figure \ref{fig:methodology}), we demonstrated that modern LLMs do not suffer from temporal decay when processing post-cutoff evidence. Our statistical analysis yielded a robust "double null" result (Omission $p=0.0786$, Stale Framing $p=1.0000$ on post-cutoff A/B tests). 
+In our research, we explored the impact of a language model's knowledge cutoff on its capacity to generate scientific literature summaries. By developing a comprehensive classification system (detailed in Section \ref{sec:lit_review}), establishing specific measurement criteria, and implementing a rigorous evaluation framework (illustrated in Figure \ref{fig:methodology}), we demonstrated that contemporary large language models do not exhibit a decline in performance due to outdated information. Statistical analysis further substantiated these findings, revealing robust double null results in post-cutoff A/B tests, with p-values of 0.0786 for omission and 1.0000 for stale framing.
 
-Furthermore, our Parametric Priming intervention proved that this robustness holds even when the model is actively forced to confront its outdated internal memory. Ultimately, RAG architectures successfully exert an \textbf{Absolute Parametric Override}. For developers and engineers building AI-assisted research tools, these findings provide a critical guarantee: RAG operates as a dominant architectural override, ensuring high-fidelity, dynamic synthesis without cross-contamination from historical training data.
-
+Crucially, we observed that the model maintained its performance even when prompted with outdated information, highlighting an \textbf{Absolute Parametric Override} mechanism inherent in RAG architectures. This finding offers significant reassurance for developers of AI-driven research tools, as it confirms that RAG systems effectively function as a dominant factor, ensuring that the synthesized information remains current and relevant.
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{references}
-
 \end{document}
